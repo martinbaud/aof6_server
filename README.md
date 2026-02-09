@@ -17,8 +17,9 @@ java -jar serverstarter-2.4.0.jar
 
 Le ServerStarter va automatiquement:
 1. Télécharger et installer Fabric Loader 0.14.22
-2. Télécharger tous les mods du modpack (~500 mods)
-3. Lancer le serveur
+2. Télécharger tous les mods du modpack (~391 mods)
+3. Demander d'accepter l'EULA Mojang (taper `TRUE` puis Entrée)
+4. Lancer le serveur
 
 ## Structure
 
