@@ -50,8 +50,8 @@ install:
   readTimeout: 90
 
 launch:
-  maxRam: 5G
-  minRam: 3G
+  maxRam: 8G
+  minRam: 4G
   autoRestart: true
   javaArgs:
     - "-XX:+UseG1GC"
