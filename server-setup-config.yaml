@@ -14,9 +14,12 @@ install:
     - mods/optifine*.jar
     - resources/**
   additionalFiles:
+  # Mods locaux optionnels (commenter pour AOF6 vanilla)
   localFiles:
     - from: local_mods/immersive_aircraft-0.7.9+1.19.2-fabric.jar
       to: mods/immersive_aircraft-0.7.9+1.19.2-fabric.jar
+    - from: local_mods/MysticalAgriculture-Refabricated-1.19.2-2.0.8.jar
+      to: mods/MysticalAgriculture-Refabricated-1.19.2-2.0.8.jar
 
   installerArguments:
     - "server"

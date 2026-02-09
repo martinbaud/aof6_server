@@ -24,12 +24,31 @@ Le ServerStarter va automatiquement:
 
 ```
 ├── aof6_modpack.zip          # Modpack avec manifest CurseForge
-├── local_mods/               # Mods locaux (non inclus dans le modpack)
-│   ├── immersive_aircraft-0.7.9+1.19.2-fabric.jar
-│   └── MysticalAgriculture-Refabricated-1.19.2-2.0.8.jar
+├── local_mods/               # Mods locaux optionnels
 ├── server-setup-config.yaml  # Configuration ServerStarter
 └── serverstarter-2.4.0.jar   # Launcher ServerStarter
 ```
+
+## Mods locaux (optionnels)
+
+Le dossier `local_mods/` contient des mods **non inclus** dans le modpack de base AOF6:
+
+| Mod | Description |
+|-----|-------------|
+| `immersive_aircraft-0.7.9` | Ajoute des avions/dirigeables. Du même créateur que Immersive Armors (inclus dans AOF6). |
+| `MysticalAgriculture-Refabricated-1.19.2-2.0.8` | Fix pour le bug de la capsule d'XP. |
+
+### Désactiver les mods locaux
+
+Pour un serveur AOF6 **vanilla** (sans mods perso), commentez la section `localFiles` dans `server-setup-config.yaml`:
+
+```yaml
+# localFiles:
+#   - from: local_mods/immersive_aircraft-0.7.9+1.19.2-fabric.jar
+#     to: mods/immersive_aircraft-0.7.9+1.19.2-fabric.jar
+```
+
+Les joueurs n'auront alors pas besoin d'installer immersive_aircraft sur leur client.
 
 ## Configuration
 
@@ -49,4 +68,5 @@ unzip world_backup.zip
 
 ## Client
 
-Les joueurs doivent utiliser **All of Fabric 6 v1.10.1** + le mod `immersive_aircraft-0.7.9`.
+- **Modpack:** All of Fabric 6 v1.10.1
+- **Mods additionnels (si activés sur le serveur):** `immersive_aircraft-0.7.9`
