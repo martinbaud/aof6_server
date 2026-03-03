@@ -1,0 +1,37 @@
+# Runtime files
+world/
+logs/
+crash-reports/
+libraries/
+versions/
+mods/
+.fabric/
+
+# Server generated
+server.jar
+fabric-server-launch.jar
+fabric-server-launcher.properties
+serverstarter.lock
+fabricloader.log
+eula.txt
+
+# Config (generated at runtime)
+config/
+defaultconfigs/
+kubejs/
+local/
+modernfix/
+patchouli_books/
+shaderpacks/
+
+# Player data
+*.json
+!server-setup-config.yaml
+
+# Cache
+usercache.json
+usernamecache.json
+
+# Backups
+*.zip.bak
+world_backup.zip
