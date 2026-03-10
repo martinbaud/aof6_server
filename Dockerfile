@@ -13,18 +13,15 @@ COPY server-setup-config.yaml ./
 COPY aof6_modpack.zip ./
 COPY local_mods/ ./local_mods/
 
-# Accept EULA upfront
-RUN mkdir -p /server && echo "eula=true" > eula.txt
-
-# Run initial setup (download mods, install fabric)
-# This is done at build time to speed up container starts
-RUN java -jar serverstarter-2.4.0.jar || true
+# Pre-accept EULA (Minecraft requirement)
+RUN echo "eula=true" > eula.txt
 
 # Expose Minecraft port
 EXPOSE 25565
 
-# Start server
-CMD ["java", "-Xmx6G", "-Xms4G", \
-     "-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled", \
-     "-XX:MaxGCPauseMillis=100", "-XX:+UnlockExperimentalVMOptions", \
-     "-jar", "serverstarter-2.4.0.jar"]
+# Start script: setup + run (first start downloads mods ~10min)
+CMD echo "eula=true" > eula.txt && \
+    java -Xmx6G -Xms4G \
+    -XX:+UseG1GC -XX:+ParallelRefProcEnabled \
+    -XX:MaxGCPauseMillis=100 -XX:+UnlockExperimentalVMOptions \
+    -jar serverstarter-2.4.0.jar
