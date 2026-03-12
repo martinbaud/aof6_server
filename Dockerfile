@@ -26,9 +26,11 @@ CMD if [ ! -f /server/serverstarter-2.4.0.jar ]; then \
       cp -r /setup/* /server/; \
     fi && \
     echo "eula=true" > eula.txt && \
+    echo "Updating server.properties from setup..." && \
+    cp /setup/server.properties /server/server.properties && \
     if [ -n "$RCON_PASSWORD" ]; then \
       echo "Configuring RCON password..." && \
-      sed -i "s/CHANGE_ME_IN_RAILWAY/$RCON_PASSWORD/g" server.properties; \
+      sed -i "s/CHANGE_ME_IN_RAILWAY/$RCON_PASSWORD/g" /server/server.properties; \
     fi && \
     java -Xmx6G -Xms4G \
     -XX:+UseG1GC -XX:+ParallelRefProcEnabled \
