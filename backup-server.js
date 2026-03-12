@@ -12,8 +12,10 @@ const PORT = process.env.BACKUP_PORT || 3000;
 const WORLD_PATH = process.env.WORLD_PATH || '/server/world';
 const BACKUP_SECRET = process.env.BACKUP_SECRET || '';
 
-// Google Drive config
-const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+// Google Drive OAuth config
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
 // RCON config (localhost since we're on the same server)
@@ -61,28 +63,22 @@ function createArchive(sourcePath, outputPath) {
 }
 
 async function uploadToDrive(filePath, fileName) {
-  if (!GOOGLE_SERVICE_ACCOUNT_JSON || !GOOGLE_DRIVE_FOLDER_ID) {
-    throw new Error('Google Drive not configured');
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN || !GOOGLE_DRIVE_FOLDER_ID) {
+    throw new Error('Google Drive OAuth not configured');
   }
 
-  let credentials;
-  try {
-    const decoded = Buffer.from(GOOGLE_SERVICE_ACCOUNT_JSON, 'base64').toString('utf-8');
-    credentials = JSON.parse(decoded);
-  } catch (e) {
-    try {
-      credentials = JSON.parse(GOOGLE_SERVICE_ACCOUNT_JSON);
-    } catch (e2) {
-      throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_JSON format');
-    }
-  }
+  // Create OAuth2 client
+  const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET
+  );
 
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  // Set credentials with refresh token
+  oauth2Client.setCredentials({
+    refresh_token: GOOGLE_REFRESH_TOKEN
   });
 
-  const drive = google.drive({ version: 'v3', auth });
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
   const fileMetadata = {
     name: fileName,
@@ -222,5 +218,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Backup server running on port ${PORT}`);
   console.log(`World path: ${WORLD_PATH}`);
-  console.log(`Google Drive configured: ${!!GOOGLE_SERVICE_ACCOUNT_JSON && !!GOOGLE_DRIVE_FOLDER_ID}`);
+  console.log(`Google Drive OAuth configured: ${!!GOOGLE_CLIENT_ID && !!GOOGLE_REFRESH_TOKEN && !!GOOGLE_DRIVE_FOLDER_ID}`);
 });
