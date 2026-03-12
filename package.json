@@ -1,0 +1,13 @@
+{
+  "name": "aof6-backup-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node backup-server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "googleapis": "^144.0.0",
+    "rcon-client": "^4.2.4"
+  }
+}

@@ -27,6 +27,8 @@ shaderpacks/
 # Player data
 *.json
 !server-setup-config.yaml
+!package.json
+!package-lock.json
 
 # Cache
 usercache.json
