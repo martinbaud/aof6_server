@@ -107,6 +107,40 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
+async function listBackups(limit = 10) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN || !GOOGLE_DRIVE_FOLDER_ID) {
+    throw new Error('Google Drive OAuth not configured');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: GOOGLE_REFRESH_TOKEN
+  });
+
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+  // List files in the backup folder, sorted by date (newest first)
+  const response = await drive.files.list({
+    q: `'${GOOGLE_DRIVE_FOLDER_ID}' in parents and mimeType='application/zip' and trashed=false`,
+    fields: 'files(id, name, size, createdTime, webViewLink)',
+    orderBy: 'createdTime desc',
+    pageSize: limit,
+  });
+
+  return response.data.files.map((file, index) => ({
+    index: index + 1,
+    id: file.id,
+    name: file.name,
+    size: formatBytes(parseInt(file.size || 0)),
+    createdAt: file.createdTime,
+    link: file.webViewLink,
+  }));
+}
+
 async function runBackup() {
   if (isBackupRunning) {
     return { success: false, error: 'Backup already in progress' };
@@ -208,6 +242,27 @@ const server = http.createServer(async (req, res) => {
       worldPath: WORLD_PATH,
       worldExists: fs.existsSync(WORLD_PATH),
     }));
+    return;
+  }
+
+  // List backups endpoint
+  if (req.method === 'GET' && req.url === '/list') {
+    // Check secret if configured
+    const authHeader = req.headers['authorization'];
+    if (BACKUP_SECRET && authHeader !== `Bearer ${BACKUP_SECRET}`) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ success: false, error: 'Unauthorized' }));
+      return;
+    }
+
+    try {
+      const backups = await listBackups(10);
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: true, backups }));
+    } catch (error) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ success: false, error: error.message }));
+    }
     return;
   }
 
