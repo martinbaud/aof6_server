@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import archiver from 'archiver';
+import unzipper from 'unzipper';
 import { google } from 'googleapis';
 import { Rcon } from 'rcon-client';
 
@@ -24,6 +25,7 @@ const RCON_PORT = parseInt(process.env.RCON_PORT || '25575');
 const RCON_PASSWORD = process.env.RCON_PASSWORD;
 
 let isBackupRunning = false;
+let isRestoreRunning = false;
 
 async function executeRcon(command) {
   if (!RCON_PASSWORD) {
@@ -139,6 +141,113 @@ async function listBackups(limit = 10) {
     createdAt: file.createdTime,
     link: file.webViewLink,
   }));
+}
+
+async function downloadFromDrive(fileId, destPath) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
+    throw new Error('Google Drive OAuth not configured');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: GOOGLE_REFRESH_TOKEN
+  });
+
+  const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+  const response = await drive.files.get(
+    { fileId, alt: 'media' },
+    { responseType: 'stream' }
+  );
+
+  return new Promise((resolve, reject) => {
+    const dest = fs.createWriteStream(destPath);
+    response.data
+      .on('error', reject)
+      .pipe(dest)
+      .on('error', reject)
+      .on('finish', resolve);
+  });
+}
+
+function extractBackup(zipPath, destPath) {
+  return new Promise((resolve, reject) => {
+    // Remove existing world folder first
+    if (fs.existsSync(destPath)) {
+      fs.rmSync(destPath, { recursive: true, force: true });
+    }
+    fs.mkdirSync(destPath, { recursive: true });
+
+    fs.createReadStream(zipPath)
+      .pipe(unzipper.Extract({ path: destPath }))
+      .on('error', reject)
+      .on('close', resolve);
+  });
+}
+
+async function runRestore(backupId) {
+  if (isRestoreRunning) {
+    return { success: false, error: 'Restore already in progress' };
+  }
+
+  if (isBackupRunning) {
+    return { success: false, error: 'Cannot restore while backup is running' };
+  }
+
+  isRestoreRunning = true;
+  const tempPath = `/tmp/restore-${Date.now()}.zip`;
+
+  try {
+    console.log('Starting restore...');
+
+    // Step 1: Download backup from Google Drive
+    console.log('Downloading backup from Google Drive...');
+    await downloadFromDrive(backupId, tempPath);
+    console.log('Download complete');
+
+    // Step 2: Disable autosave and save current state (just in case)
+    console.log('Preparing server...');
+    await executeRcon('save-off');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Step 3: Extract backup to world folder (replaces current world)
+    console.log('Extracting backup...');
+    await extractBackup(tempPath, WORLD_PATH);
+    console.log('Extraction complete');
+
+    // Step 4: Cleanup temp file
+    fs.unlinkSync(tempPath);
+
+    // Step 5: Stop the server (Docker will auto-restart it)
+    console.log('Restarting server...');
+    await executeRcon('stop');
+
+    isRestoreRunning = false;
+    return {
+      success: true,
+      message: 'Backup restored, server restarting',
+    };
+  } catch (error) {
+    console.error('Restore error:', error);
+
+    // Cleanup on error
+    if (fs.existsSync(tempPath)) {
+      fs.unlinkSync(tempPath);
+    }
+
+    // Try to re-enable autosave
+    await executeRcon('save-on');
+
+    isRestoreRunning = false;
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 }
 
 async function runBackup() {
@@ -263,6 +372,39 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500);
       res.end(JSON.stringify({ success: false, error: error.message }));
     }
+    return;
+  }
+
+  // Restore backup endpoint
+  if (req.method === 'POST' && req.url === '/restore') {
+    // Check secret if configured
+    const authHeader = req.headers['authorization'];
+    if (BACKUP_SECRET && authHeader !== `Bearer ${BACKUP_SECRET}`) {
+      res.writeHead(401);
+      res.end(JSON.stringify({ success: false, error: 'Unauthorized' }));
+      return;
+    }
+
+    // Parse request body
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body);
+        if (!data.backupId) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ success: false, error: 'backupId is required' }));
+          return;
+        }
+
+        const result = await runRestore(data.backupId);
+        res.writeHead(result.success ? 200 : 500);
+        res.end(JSON.stringify(result));
+      } catch (error) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ success: false, error: error.message }));
+      }
+    });
     return;
   }
 

@@ -8,6 +8,7 @@
   "dependencies": {
     "archiver": "^7.0.1",
     "googleapis": "^144.0.0",
-    "rcon-client": "^4.2.4"
+    "rcon-client": "^4.2.4",
+    "unzipper": "^0.12.3"
   }
 }
