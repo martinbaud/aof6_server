@@ -126,8 +126,9 @@ async function listBackups(limit = 10) {
   const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
   // List files in the backup folder, sorted by date (newest first)
+  // Filter by name prefix to only show this server's backups
   const response = await drive.files.list({
-    q: `'${GOOGLE_DRIVE_FOLDER_ID}' in parents and mimeType='application/zip' and trashed=false`,
+    q: `'${GOOGLE_DRIVE_FOLDER_ID}' in parents and mimeType='application/zip' and trashed=false and name contains 'aof6-backup'`,
     fields: 'files(id, name, size, createdTime, webViewLink)',
     orderBy: 'createdTime desc',
     pageSize: limit,
